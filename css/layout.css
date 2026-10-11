@@ -1,0 +1,258 @@
+.app {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  min-height: 100%;
+}
+
+/* Sidebar lateral */
+.sidebar {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-color);
+  border-right: 1px solid var(--line);
+  padding: 22px 0 16px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: calc(22px + env(safe-area-inset-top, 0px));
+}
+
+.brand {
+  padding: 0 20px 20px;
+  border-bottom: 1px solid rgba(230, 220, 190, .14);
+  margin-bottom: 14px;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--brass-soft);
+}
+
+.brand-mark svg {
+  flex: none;
+}
+
+.brand-mark .tag {
+  font-family: 'Zilla Slab', serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #F3ECDB;
+  letter-spacing: .01em;
+}
+
+.brand-sub {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: #B7A98A;
+  line-height: 1.4;
+  max-width: 190px;
+}
+
+nav.mainnav {
+  flex: 1;
+  padding: 4px 12px;
+  overflow-y: auto;
+}
+
+nav.mainnav .navgroup-label {
+  font-size: 10.5px;
+  color: #8C7E60;
+  padding: 14px 10px 6px;
+  letter-spacing: .04em;
+}
+
+nav.mainnav button.navitem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #D9CDAE;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13.6px;
+  margin-bottom: 2px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+nav.mainnav button.navitem svg {
+  flex: none;
+  opacity: .85;
+}
+
+nav.mainnav button.navitem:hover {
+  background: rgba(216, 195, 155, .09);
+}
+
+nav.mainnav button.navitem.active {
+  background: var(--leather);
+  color: #F7EEE2;
+}
+
+nav.mainnav button.navitem.active svg {
+  opacity: 1;
+}
+
+.sidebar-foot {
+  padding: 14px 20px 4px;
+  border-top: 1px solid rgba(230, 220, 190, .14);
+  font-size: 11px;
+  color: #8C7E60;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.theme-toggle {
+  background: none;
+  border: 1px solid rgba(230, 220, 190, .25);
+  color: #C9BC9C;
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle:hover {
+  border-color: rgba(230, 220, 190, .5);
+}
+
+/* Área principal de contenido */
+main {
+  min-width: 0;
+  padding: 0 30px 60px;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--paper);
+  padding: 26px 0 16px;
+  padding-top: calc(26px + env(safe-area-inset-top, 0px));
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.topbar h1 {
+  font-size: 25px;
+}
+
+.topbar .subtitle {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+/* Responsive & Mobile */
+@media (max-width: 980px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: relative;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px;
+    gap: 10px;
+    overflow-x: auto;
+  }
+
+  .brand {
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  nav.mainnav {
+    display: flex;
+    padding: 0;
+    flex: none;
+  }
+
+  nav.mainnav button.navitem {
+    white-space: nowrap;
+    margin: 0 2px;
+  }
+
+  .sidebar-foot {
+    display: none;
+  }
+
+  main {
+    padding: 0 16px 50px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Reglas de impresión */
+@media print {
+
+  .sidebar,
+  .topbar-actions,
+  .tabs,
+  .section-head .btn,
+  .no-print {
+    display: none !important;
+  }
+
+  .app {
+    display: block;
+  }
+
+  main {
+    padding: 0;
+  }
+
+  body {
+    background: #fff;
+  }
+}

@@ -1,0 +1,140 @@
+:root {
+  color-scheme: light;
+  --ink: #211D17;
+  --ink-soft: #4A4335;
+  --paper: #E3DBC8;
+  --paper-panel: #F1EBDD;
+  --paper-raised: #FAF7EE;
+
+  /* Contenedores con contraste independiente del tema */
+  --sidebar-bg: #211D17;
+  --sidebar-color: #F1EBDD;
+  --hero-bg: #211D17;
+  --hero-color: #FAF7EE;
+  --toast-bg: #211D17;
+  --toast-color: #FAF7EE;
+
+  --leather: #7B2E22;
+  --leather-dark: #5F2119;
+  --brass: #A87C3F;
+  --brass-soft: #D8C39B;
+  --forest: #3C5941;
+  --forest-soft: #DDE6D6;
+  --denim: #33526C;
+  --denim-soft: #D9E2E8;
+  --line: #C6B99B;
+  --line-soft: #DAD0B8;
+  --danger: #8C3327;
+  --radius: 3px;
+  --shadow: 0 1px 0 rgba(33, 29, 23, .06);
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+/* Modo oscuro automático según preferencia del sistema */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ink: #EFE7D4;
+    --ink-soft: #C9BEA2;
+    --paper: #191510;
+    --paper-panel: #211C15;
+    --paper-raised: #2A2318;
+
+    /* En modo oscuro la barra lateral y el hero deben ser paneles oscuros de alto contraste */
+    --sidebar-bg: #130F0B;
+    --sidebar-color: #EFE7D4;
+    --hero-bg: #1B1610;
+    --hero-color: #FAF7EE;
+    --toast-bg: #2A2318;
+    --toast-color: #EFE7D4;
+
+    --leather: #D1786A;
+    --leather-dark: #A64E40;
+    --brass: #D4AF74;
+    --brass-soft: #4A3E27;
+    --forest: #97C2A3;
+    --forest-soft: #25322A;
+    --denim: #9BBED6;
+    --denim-soft: #212E37;
+    --line: #4A4130;
+    --line-soft: #332C20;
+    --danger: #E08E83;
+  }
+}
+
+/* Modo oscuro explícito por atributo data-theme="dark" */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #EFE7D4;
+  --ink-soft: #C9BEA2;
+  --paper: #191510;
+  --paper-panel: #211C15;
+  --paper-raised: #2A2318;
+
+  --sidebar-bg: #130F0B;
+  --sidebar-color: #EFE7D4;
+  --hero-bg: #1B1610;
+  --hero-color: #FAF7EE;
+  --toast-bg: #2A2318;
+  --toast-color: #EFE7D4;
+
+  --leather: #D1786A;
+  --leather-dark: #A64E40;
+  --brass: #D4AF74;
+  --brass-soft: #4A3E27;
+  --forest: #97C2A3;
+  --forest-soft: #25322A;
+  --denim: #9BBED6;
+  --denim-soft: #212E37;
+  --line: #4A4130;
+  --line-soft: #332C20;
+  --danger: #E08E83;
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: 'Zilla Slab', Georgia, serif;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: .01em;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
