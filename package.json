@@ -5,8 +5,9 @@
   "description": "Sistema de Cobranza a Colaboradores VALER E.I.R.L",
   "type": "module",
   "scripts": {
-    "dev": "npx -y serve . -p 3000",
+    "dev": "npx -y concurrently -k -p \"[{name}]\" -n \"BACKEND,FRONTEND\" -c \"magenta,cyan\" \"python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload\" \"npx -y serve . -p 3000\"",
     "backend": "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
-    "serve": "npx -y live-server ."
+    "frontend": "npx -y serve . -p 3000",
+    "start": "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
   }
 }
