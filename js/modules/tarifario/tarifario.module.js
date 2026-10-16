@@ -39,11 +39,11 @@ export function renderTarifarioView(container) {
         </div>
         <div class="field">
           <label>Precio por par (S/)</label>
-          <input type="number" id="fPrecioPar" step="0.10" min="0" required>
+          <input type="number" id="fPrecioPar" step="0.01" min="0" required>
         </div>
         <div class="field">
           <label>Precio por docena (S/)</label>
-          <input type="number" id="fPrecioDocena" step="0.10" min="0" required>
+          <input type="number" id="fPrecioDocena" step="0.01" min="0" required>
         </div>
       </div>
       <div style="display: flex; gap: 8px;">
@@ -65,11 +65,11 @@ export function renderTarifarioView(container) {
         </div>
         <div class="field">
           <label>Precio por par (S/)</label>
-          <input type="number" id="editFPrecioPar" step="0.10" min="0" required>
+          <input type="number" id="editFPrecioPar" step="0.01" min="0" required>
         </div>
         <div class="field">
           <label>Precio por docena (S/)</label>
-          <input type="number" id="editFPrecioDocena" step="0.10" min="0" required>
+          <input type="number" id="editFPrecioDocena" step="0.01" min="0" required>
         </div>
       </div>
       <div style="display: flex; gap: 8px;">

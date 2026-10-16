@@ -127,7 +127,7 @@ export function renderLiquidacionView(container) {
           <td class="num mono">
             ${isClosed
           ? money(descuento)
-          : `<input type="number" min="0" step="0.5" value="${descuento}"
+          : `<input type="number" min="0" step="0.01" value="${descuento}"
                   style="width: 90px; text-align: right;" class="mono input-descuento"
                   data-worker="${worker.id}" data-bruto="${bruto}">`
         }
