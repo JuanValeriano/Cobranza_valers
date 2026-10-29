@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sistema de Cobranza a Colaboradores — VALER E.I.R.L</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+
+<body>
+  <div class="app">
+
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <path
+              d="M4 18c0-2 1.5-3 3-4l2-5c.4-1 1.3-1.6 2.4-1.6h5.1c1 0 1.9.6 2.3 1.5l1.7 3.8c2.2.5 3.5 1.6 3.5 3.3v2.3c0 .9-.7 1.6-1.6 1.6H5.6c-.9 0-1.6-.7-1.6-1.6V18Z"
+              stroke="#D8C39B" stroke-width="1.4" stroke-linejoin="round" />
+            <path d="M9 18h9" stroke="#D8C39B" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+          <span class="tag">VALER&nbsp;E.I.R.L</span>
+        </div>
+        <div class="brand-sub">Sistema de Cobranza a Colaboradores · Control de producción y liquidación semanal</div>
+      </div>
+
+      <nav class="mainnav" id="mainnav">
+        <button class="navitem active" data-view="resumen">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M4 12 12 4l8 8" />
+            <path d="M6 10.5V20h12v-9.5" />
+            <path d="M10 20v-6h4v6" />
+          </svg>
+          Resumen
+        </button>
+        <button class="navitem" data-view="registro">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M5 4h11l3 3v13H5z" />
+            <path d="M9 9h7M9 13h7M9 17h4" />
+          </svg>
+          Registro diario
+        </button>
+        <button class="navitem" data-view="trabajadores">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="9" cy="8" r="3" />
+            <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+            <circle cx="17.5" cy="9.5" r="2.3" />
+            <path d="M15.5 14c2.6.3 4.5 2.4 4.5 5" />
+          </svg>
+          Trabajadores
+        </button>
+        <button class="navitem" data-view="tarifario">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M12 3 21 12l-8 8L4 11.3V4h7Z" />
+            <circle cx="8" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
+          </svg>
+          Tarifario de labores
+        </button>
+        <button class="navitem" data-view="liquidacion">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="4" y="10" width="16" height="10" rx="1.5" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+          </svg>
+          Liquidación semanal
+        </button>
+        <button class="navitem" data-view="reportes">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M5 20V10M11 20V4M17 20v-7" />
+            <path d="M3 20h18" />
+          </svg>
+          Reportes
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div id="dbStatusPill" class="db-status-pill" title="Comprobando conexión con base de datos Neon...">
+          <span class="status-dot"></span>
+          <span id="dbStatusText">Conectando Neon DB...</span>
+        </div>
+        <div class="sidebar-foot-row">
+          <span>v1.0 · Neon DB</span>
+          <button class="theme-toggle" id="themeToggle" type="button">Modo oscuro</button>
+        </div>
+      </div>
+    </aside>
+
+    <main id="appMain">
+      <section class="view active" id="view-resumen"></section>
+      <section class="view" id="view-registro"></section>
+      <section class="view" id="view-trabajadores"></section>
+      <section class="view" id="view-tarifario"></section>
+      <section class="view" id="view-liquidacion"></section>
+      <section class="view" id="view-reportes"></section>
+    </main>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="./js/app.js?v=3"></script>
+</body>
+
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "cobranza-colaboradores-valer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de Cobranza a Colaboradores VALER E.I.R.L",
+  "type": "module",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "electron . --dev",
+    "start": "electron .",
+    "electron": "electron .",
+    "backend": "python -m uvicorn BACKEND.app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "frontend": "npx -y serve FRONTEND -p 3000"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0"
+  }
+}
