@@ -1,7 +1,8 @@
-const { app, BrowserWindow, dialog, shell } = require('electron');
+const { app, BrowserWindow, dialog, shell, ipcMain } = require('electron');
 const path = require('path');
 const { spawn, execSync } = require('child_process');
 const http = require('http');
+const fs = require('fs');
 
 let mainWindow = null;
 let pythonProcess = null;
@@ -110,7 +111,61 @@ function createMainWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.cjs'),
       spellcheck: false
+    }
+  });
+
+  // Manejador para exportar PDF de forma nativa sin pasar por diálogo de impresión ni capturas de pantalla
+  ipcMain.handle('export-pdf-native', async (event, { html, defaultName, landscape = false, pageSize = 'A4' }) => {
+    let pdfWindow = null;
+    try {
+      pdfWindow = new BrowserWindow({
+        show: false,
+        width: 1200,
+        height: 900,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+
+      await pdfWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+      const pdfBuffer = await pdfWindow.webContents.printToPDF({
+        landscape: !!landscape,
+        pageSize: pageSize || 'A4',
+        printBackground: true,
+        margins: {
+          marginType: 'custom',
+          top: 0.35,
+          bottom: 0.35,
+          left: 0.35,
+          right: 0.35
+        }
+      });
+
+      pdfWindow.close();
+      pdfWindow = null;
+
+      const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Guardar Reporte en PDF — VALER E.I.R.L',
+        defaultPath: defaultName || 'reporte.pdf',
+        filters: [{ name: 'Documento PDF (*.pdf)', extensions: ['pdf'] }]
+      });
+
+      if (canceled || !filePath) {
+        return { success: false, canceled: true };
+      }
+
+      fs.writeFileSync(filePath, pdfBuffer);
+      return { success: true, filePath };
+    } catch (err) {
+      if (pdfWindow) {
+        try { pdfWindow.close(); } catch (e) {}
+      }
+      console.error('[Electron] Error al generar PDF:', err);
+      return { success: false, error: err.message };
     }
   });
 

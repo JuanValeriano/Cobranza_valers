@@ -7,11 +7,14 @@ class Store {
     this.state = loadState();
     this.listeners = new Set();
     this.backendConnected = false;
+    this.isSyncing = false;
+    this._syncPromise = null;
     this.ready = this.syncWithBackend();
-    // Verificación periódica para detectar el cierre de los domingos a las 11:59 PM
+
     setInterval(() => {
       this.checkAutoCloseCondition();
-    }, 30000);
+      this.syncWithBackend();
+    }, 25000);
   }
 
   checkAutoCloseCondition() {
@@ -29,20 +32,33 @@ class Store {
   }
 
   async syncWithBackend() {
-    try {
-      const serverState = await api.getState();
-      if (serverState && serverState.workers) {
-        this.state = serverState;
-        this.backendConnected = true;
-        this.notify();
-      }
-      return this.state;
-    } catch (e) {
-      this.backendConnected = false;
-      console.info("[Store] Modo offline o servidor local no disponible. Usando almacenamiento local.");
-      this.notify();
-      return this.state;
+
+    if (this._syncPromise) {
+      return this._syncPromise;
     }
+
+    this.isSyncing = true;
+    this._syncPromise = (async () => {
+      try {
+        const serverState = await api.getState();
+        if (serverState && serverState.workers) {
+          this.state = serverState;
+          this.backendConnected = true;
+          this.notify();
+        }
+        return this.state;
+      } catch (e) {
+        this.backendConnected = false;
+        console.info("[Store] Modo offline o servidor local no disponible. Usando almacenamiento local.");
+        this.notify();
+        return this.state;
+      } finally {
+        this.isSyncing = false;
+        this._syncPromise = null;
+      }
+    })();
+
+    return this._syncPromise;
   }
 
   getState() {
@@ -394,10 +410,8 @@ class Store {
     const p = this.ensurePayment(closureId, workerId, bruto);
     p.metodo = val;
     if (val === 'MIXTO') {
-      if (!p.montoEfectivo && !p.montoDigital) {
-        p.montoEfectivo = Math.round((p.neto / 2) * 100) / 100;
-        p.montoDigital = Math.round((p.neto - p.montoEfectivo) * 100) / 100;
-      }
+      p.montoEfectivo = 0;
+      p.montoDigital = 0;
     } else if (val === 'EFECTIVO') {
       p.montoEfectivo = p.neto;
       p.montoDigital = 0;
@@ -450,10 +464,10 @@ class Store {
       p.bruto = bruto;
       p.neto = Math.round((bruto - p.descuentos) * 100) / 100;
       if (p.metodo === 'MIXTO') {
-        const hasValidCustom = (p.montoEfectivo !== undefined && p.montoDigital !== undefined && Math.abs((p.montoEfectivo + p.montoDigital) - p.neto) < 0.05);
+        const hasValidCustom = (p.montoEfectivo !== undefined && p.montoDigital !== undefined && Math.abs((p.montoEfectivo + p.montoDigital) - p.neto) < 0.05 && p.neto > 0);
         if (!hasValidCustom) {
-          p.montoEfectivo = Math.round((p.neto / 2) * 100) / 100;
-          p.montoDigital = Math.round((p.neto - p.montoEfectivo) * 100) / 100;
+          p.montoEfectivo = 0;
+          p.montoDigital = 0;
         }
       } else {
         p.montoEfectivo = p.metodo === 'EFECTIVO' ? p.neto : 0;

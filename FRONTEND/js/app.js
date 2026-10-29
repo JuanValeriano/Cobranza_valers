@@ -1,11 +1,12 @@
-import { store } from './state/store.js?v=3';
-import { initSidebar, setActiveNavItem } from './components/sidebar.js?v=3';
-import { renderResumenView } from './modules/resumen/resumen.module.js?v=3';
-import { renderRegistroView } from './modules/registro/registro.module.js?v=3';
-import { renderTrabajadoresView } from './modules/trabajadores/trabajadores.module.js?v=3';
-import { renderTarifarioView } from './modules/tarifario/tarifario.module.js?v=3';
-import { renderLiquidacionView } from './modules/liquidacion/liquidacion.module.js?v=3';
-import { renderReportesView } from './modules/reportes/reportes.module.js?v=3';
+import { store } from './state/store.js?v=6';
+import { initSidebar, setActiveNavItem } from './components/sidebar.js?v=6';
+import { renderResumenView } from './modules/resumen/resumen.module.js?v=6';
+import { renderRegistroView } from './modules/registro/registro.module.js?v=6';
+import { renderTrabajadoresView } from './modules/trabajadores/trabajadores.module.js?v=6';
+import { renderTarifarioView } from './modules/tarifario/tarifario.module.js?v=6';
+import { renderLiquidacionView } from './modules/liquidacion/liquidacion.module.js?v=6';
+import { renderReportesView } from './modules/reportes/reportes.module.js?v=6';
+import { showToast } from './components/toast.js?v=6';
 
 const VIEWS = {
   resumen: {
@@ -37,6 +38,7 @@ const VIEWS = {
 class App {
   constructor() {
     this.currentView = 'resumen';
+    this.isSyncingDb = false;
     this.router = {
       navigateTo: (viewName) => this.navigateTo(viewName)
     };
@@ -47,12 +49,31 @@ class App {
       onNavigate: (viewName) => this.navigateTo(viewName)
     });
 
+    const pillEl = document.getElementById('dbStatusPill');
+    if (pillEl) {
+      pillEl.addEventListener('click', () => {
+        showToast('Consultando base de datos Neon...');
+        this.syncDatabase();
+      });
+    }
+
+    window.addEventListener('focus', () => {
+      this.syncDatabase();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.syncDatabase();
+      }
+    });
+
     this.navigateTo('resumen');
 
-    // Suscripción reactiva: cualquier actualización del store o sincronización con Neon refresca la vista
     store.subscribe(() => {
       this.renderCurrentView();
-      this.updateDbStatus();
+      if (!this.isSyncingDb) {
+        this.updateDbStatus();
+      }
     });
   }
 
@@ -61,8 +82,34 @@ class App {
     if (viewConfig) {
       const container = document.getElementById(viewConfig.containerId);
       if (container && container.classList.contains('active')) {
+        const activeEl = document.activeElement;
+        const isEditing = activeEl && container.contains(activeEl) &&
+          (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+        if (isEditing) {
+          activeEl.addEventListener('blur', () => {
+            viewConfig.render(container, this.router);
+          }, { once: true });
+          return;
+        }
+
         viewConfig.render(container, this.router);
       }
+    }
+  }
+
+  setSyncingStatus(isSyncing) {
+    this.isSyncingDb = isSyncing;
+    const statusEl = document.getElementById('dbStatusText');
+    const pillEl = document.getElementById('dbStatusPill');
+    if (!statusEl || !pillEl) return;
+
+    if (isSyncing) {
+      pillEl.className = 'db-status-pill syncing';
+      statusEl.textContent = 'Consultando Neon DB...';
+      pillEl.title = 'Obteniendo los últimos cambios de la base de datos...';
+    } else {
+      this.updateDbStatus();
     }
   }
 
@@ -77,15 +124,26 @@ class App {
     if (store.backendConnected) {
       pillEl.className = 'db-status-pill online';
       statusEl.textContent = `Neon DB: ${workers.length} colab · ${rates.length} tarifas`;
-      pillEl.title = `Conectado a Neon PostgreSQL (${workers.length} colaboradores, ${rates.length} tarifas en BD)`;
+      pillEl.title = `Conectado a Neon PostgreSQL (${workers.length} colaboradores, ${rates.length} tarifas en BD). Clic para sincronizar.`;
     } else {
       pillEl.className = 'db-status-pill offline';
       statusEl.textContent = `Modo local (${workers.length} colab)`;
-      pillEl.title = 'Modo local o sincronizando con Neon DB...';
+      pillEl.title = 'Modo local o reconectando a Neon DB... Clic para reintentar.';
     }
   }
 
-  navigateTo(viewName) {
+  async syncDatabase() {
+    this.setSyncingStatus(true);
+    try {
+      await store.syncWithBackend();
+    } catch (e) {
+      console.warn('[App] Error al consultar la BD:', e);
+    } finally {
+      this.setSyncingStatus(false);
+    }
+  }
+
+  async navigateTo(viewName) {
     const viewConfig = VIEWS[viewName];
     if (!viewConfig) {
       console.warn(`Vista desconocida: "${viewName}"`);
@@ -104,6 +162,8 @@ class App {
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    await this.syncDatabase();
   }
 }
 

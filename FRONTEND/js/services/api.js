@@ -1,13 +1,9 @@
-// Configuración de la URL de Backend para producción (Hugging Face Spaces)
-// Cuando crees tu Space en Hugging Face, reemplaza esta URL con la tuya:
 export const HUGGINGFACE_URL = 'https://TU-USUARIO-valer-backend.hf.space';
 
 export function getApiBaseUrl() {
-  // 1. Opción personalizada guardada en el navegador (útil para pruebas o cambio rápido)
   const customUrl = localStorage.getItem('VALER_BACKEND_URL');
   if (customUrl) return customUrl.replace(/\/+$/, '') + '/api';
 
-  // 2. Detección automática en entorno local / Electron
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
   if (isLocal) {
     return (window.location.port === '8000')
@@ -15,19 +11,24 @@ export function getApiBaseUrl() {
       : 'http://127.0.0.1:8000/api';
   }
 
-  // 3. Entorno de producción (desplegado en Firebase Hosting)
   return `${HUGGINGFACE_URL.replace(/\/+$/, '')}/api`;
 }
 
 async function request(endpoint, options = {}) {
   try {
-    const url = `${getApiBaseUrl()}${endpoint}`;
+    const isGet = !options.method || options.method.toUpperCase() === 'GET';
+    const sep = endpoint.includes('?') ? '&' : '?';
+
+    const finalEndpoint = isGet ? `${endpoint}${sep}_t=${Date.now()}` : endpoint;
+    const url = `${getApiBaseUrl()}${finalEndpoint}`;
     const headers = {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
       ...options.headers,
     };
 
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, { cache: 'no-store', ...options, headers });
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Error en API (${response.status}): ${errorText}`);

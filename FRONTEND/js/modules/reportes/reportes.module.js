@@ -3,6 +3,7 @@ import { ROLES, ROLE_COLOR } from '../../config/constants.js';
 import { money, fmtDate } from '../../utils/formatters.js';
 import { renderBarListChart, renderDonutChart } from '../../components/charts.js';
 import { showToast } from '../../components/toast.js';
+import { exportPeriodToExcel, openPdfExportModal } from './exportHelpers.js';
 
 export function renderReportesView(container) {
   let repFiltro = "semanal";
@@ -11,7 +12,7 @@ export function renderReportesView(container) {
     <div class="topbar">
       <div>
         <h1>Reportes consolidados</h1>
-        <div class="subtitle">Gasto en mano de obra — histórico y desglose</div>
+        <div class="subtitle">Gasto en mano de obra — histórico, desglose y exportación</div>
       </div>
       <div class="topbar-actions">
         <div class="segmented" id="repFiltroContainer">
@@ -38,32 +39,37 @@ export function renderReportesView(container) {
     <div class="divider"></div>
 
     <div class="section-head">
-      <h2>Histórico</h2>
+      <div>
+        <h2 id="histSectionTitle">Histórico por semanas</h2>
+        <span class="hint" id="histSectionHint">Exporta en Excel o PDF cualquier semana seleccionada con su detalle completo</span>
+      </div>
       <div class="topbar-actions">
-        <button class="btn" id="btnExportCSV">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+        <button class="btn" id="btnExportTopExcel" title="Exportar periodo más reciente en Excel">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/>
           </svg>
-          Exportar Excel (CSV)
+          <span id="btnExportTopExcelText">Exportar Excel (actual)</span>
         </button>
-        <button class="btn" id="btnExportPDF">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-            <path d="M6 9V3h12v6M6 18h12v3H6zM4 9h16v7H4z"/>
+        <button class="btn" id="btnExportTopPDF" title="Exportar periodo más reciente en PDF ajustable">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
           </svg>
-          Exportar PDF
+          <span id="btnExportTopPDFText">Exportar PDF (actual)</span>
         </button>
       </div>
     </div>
+
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th style="width:50px; text-align:center;">Detalle</th>
+            <th style="width:40px; text-align:center;">Detalle</th>
             <th>Periodo</th>
             <th class="num">Gasto total</th>
             <th class="num">Efectivo</th>
             <th class="num">Digital</th>
             <th>Estado</th>
+            <th style="text-align:center; min-width:160px;">Exportar</th>
           </tr>
         </thead>
         <tbody id="tbodyHistorico"></tbody>
@@ -76,8 +82,12 @@ export function renderReportesView(container) {
   const chartRolContainer = container.querySelector('#chartRolReporte');
   const chartMetodoContainer = container.querySelector('#chartMetodoReporte');
   const tbodyHistorico = container.querySelector('#tbodyHistorico');
-  const btnCSV = container.querySelector('#btnExportCSV');
-  const btnPDF = container.querySelector('#btnExportPDF');
+  const btnTopExcel = container.querySelector('#btnExportTopExcel');
+  const btnTopPDF = container.querySelector('#btnExportTopPDF');
+  const btnTopExcelText = container.querySelector('#btnExportTopExcelText');
+  const btnTopPDFText = container.querySelector('#btnExportTopPDFText');
+  const histSectionTitle = container.querySelector('#histSectionTitle');
+  const histSectionHint = container.querySelector('#histSectionHint');
 
   let currentGroups = [];
 
@@ -88,14 +98,27 @@ export function renderReportesView(container) {
     const pays = store.getPaymentsForClosure(closure.id);
 
     if (pays.length) {
-      cash = pays.reduce((a, p) => a + p.montoEfectivo, 0);
-      digital = pays.reduce((a, p) => a + p.montoDigital, 0);
+      pays.forEach(p => {
+        if (p.metodo === 'EFECTIVO') {
+          cash += (p.neto !== undefined ? p.neto : (p.montoEfectivo || 0));
+        } else if (p.metodo === 'DIGITAL' || p.metodo === 'TRANSFERENCIA' || p.metodo === 'YAPE') {
+          digital += (p.neto !== undefined ? p.neto : (p.montoDigital || 0));
+        } else if (p.metodo === 'MIXTO') {
+          const ef = p.montoEfectivo || 0;
+          const dig = p.montoDigital || 0;
+          const neto = p.neto !== undefined ? p.neto : 0;
+          if (Math.abs(ef + dig - neto) < 0.01 && neto > 0) {
+            cash += ef;
+            digital += dig;
+          }
+        }
+      });
     } else {
       recs.forEach(r => {
         const w = store.getWorkerById(r.workerId);
         if (!w) return;
         if (w.metodo === "EFECTIVO") cash += r.subtotal;
-        else digital += r.subtotal;
+        else if (w.metodo !== "MIXTO") digital += r.subtotal;
       });
     }
     return { bruto, cash, digital };
@@ -107,12 +130,16 @@ export function renderReportesView(container) {
     let groups = [];
 
     if (repFiltro === "semanal") {
+      histSectionTitle.textContent = "Histórico por semanas";
+      histSectionHint.textContent = "Exporta en Excel o PDF cualquier semana seleccionada con su detalle completo de labores";
       groups = sorted.map(c => ({
         label: `${fmtDate(c.fechaInicio)} – ${fmtDate(c.fechaFin)}`,
         closures: [c],
         estado: c.estado
       }));
     } else if (repFiltro === "mensual") {
+      histSectionTitle.textContent = "Histórico por meses";
+      histSectionHint.textContent = "Exporta en Excel o PDF cualquier mes seleccionado con su detalle completo de labores";
       const byMonth = {};
       sorted.forEach(c => {
         const key = c.fechaInicio.slice(0, 7);
@@ -120,7 +147,7 @@ export function renderReportesView(container) {
       });
       groups = Object.keys(byMonth).sort().map(k => {
         const [y, m] = k.split('-');
-        const nombres = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+        const nombres = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
         return {
           label: `${nombres[parseInt(m) - 1]} ${y}`,
           closures: byMonth[k],
@@ -128,13 +155,15 @@ export function renderReportesView(container) {
         };
       });
     } else {
+      histSectionTitle.textContent = "Histórico por años";
+      histSectionHint.textContent = "Exporta en Excel o PDF cualquier año seleccionado con su detalle completo de labores";
       const byYear = {};
       sorted.forEach(c => {
         const y = c.fechaInicio.slice(0, 4);
         (byYear[y] = byYear[y] || []).push(c);
       });
       groups = Object.keys(byYear).sort().map(y => ({
-        label: y,
+        label: `Año ${y}`,
         closures: byYear[y],
         estado: byYear[y].every(c => c.estado === "CERRADO") ? "CERRADO" : "ABIERTO"
       }));
@@ -154,6 +183,17 @@ export function renderReportesView(container) {
       acc.digital += g.digital;
       return acc;
     }, { bruto: 0, cash: 0, digital: 0 }) : { bruto: 0, cash: 0, digital: 0 };
+
+    if (currentGroup) {
+      const singularLabel = repFiltro === 'semanal' ? 'esta semana' : (repFiltro === 'mensual' ? 'este mes' : 'este año');
+      btnTopExcelText.textContent = `Excel (${currentGroup.label})`;
+      btnTopPDFText.textContent = `PDF (${currentGroup.label})`;
+      btnTopExcel.style.display = 'inline-flex';
+      btnTopPDF.style.display = 'inline-flex';
+    } else {
+      btnTopExcel.style.display = 'none';
+      btnTopPDF.style.display = 'none';
+    }
 
     kpisContainer.innerHTML = `
       <div class="kpi">
@@ -204,15 +244,28 @@ export function renderReportesView(container) {
         return acc;
       }, { bruto: 0, cash: 0, digital: 0 });
 
-      // Filas de detalle con Concepto / Código, Unidad, Cantidad y Subtotal
       const recsInGroup = g.closures.flatMap(c => store.getRecordsForClosure(c.id));
+      const singularNombre = repFiltro === 'semanal' ? 'esta semana' : (repFiltro === 'mensual' ? 'este mes' : 'este año');
 
       const detailContent = `
         <tr class="hist-detail-row hist-detail-${gIdx}" style="display:none; background:var(--paper-panel);">
-          <td colspan="6" style="padding: 12px 18px 16px 28px;">
-            <div style="font-weight: 600; font-size: 11.5px; margin-bottom: 8px; color: var(--leather); text-transform: uppercase; letter-spacing: 0.5px;">
-              Detalle de labores del periodo (${g.label}) &mdash; ${recsInGroup.length} registro(s)
+          <td colspan="7" style="padding: 12px 18px 16px 28px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+              <div style="font-weight: 600; font-size: 11.5px; color: var(--leather); text-transform: uppercase; letter-spacing: 0.5px;">
+                Detalle de labores del periodo (${g.label}) &mdash; ${recsInGroup.length} registro(s)
+              </div>
+              <div style="display:inline-flex; gap:8px;">
+                <button type="button" class="btn btn-quiet btn-detail-excel" data-group="${gIdx}" style="font-size:11.5px; padding:4px 10px; display:inline-flex; align-items:center; gap:5px;" title="Descargar archivo Excel con este detalle de labores">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+                  Exportar Excel de ${singularNombre}
+                </button>
+                <button type="button" class="btn btn-quiet btn-detail-pdf" data-group="${gIdx}" style="font-size:11.5px; padding:4px 10px; display:inline-flex; align-items:center; gap:5px;" title="Exportar PDF con formato ajustable">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Exportar PDF ajustable
+                </button>
+              </div>
             </div>
+
             ${recsInGroup.length > 0 ? `
               <div class="table-wrap" style="box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
                 <table style="width: 100%; font-size: 12.5px; background: var(--paper-raised); margin: 0;">
@@ -228,9 +281,9 @@ export function renderReportesView(container) {
                   </thead>
                   <tbody>
                     ${recsInGroup.map(rec => {
-                      const w = store.getWorkerById(rec.workerId);
-                      const rt = store.getRateById(rec.rateId);
-                      return `
+        const w = store.getWorkerById(rec.workerId);
+        const rt = store.getRateById(rec.rateId);
+        return `
                         <tr>
                           <td>${fmtDate(rec.fecha)}</td>
                           <td><strong>${w ? w.nombre : '&mdash;'}</strong></td>
@@ -240,7 +293,7 @@ export function renderReportesView(container) {
                           <td class="num mono">${money(rec.subtotal)}</td>
                         </tr>
                       `;
-                    }).join('')}
+      }).join('')}
                   </tbody>
                 </table>
               </div>
@@ -254,7 +307,7 @@ export function renderReportesView(container) {
       `;
 
       return `
-        <tr class="hist-group-row" data-group="${gIdx}" style="cursor:pointer;" title="Clic para ver desglose de labores">
+        <tr class="hist-group-row" data-group="${gIdx}" style="cursor:pointer;" title="Clic para expandir o contraer labores">
           <td style="text-align:center; width:40px; padding:6px;">
             <button type="button" class="btn btn-quiet hist-toggle" data-group="${gIdx}"
               style="padding:3px 7px; font-size:11px; font-weight:bold; color:var(--leather); border:1px solid var(--line); border-radius:4px; background:var(--paper-raised);"
@@ -267,12 +320,28 @@ export function renderReportesView(container) {
           <td class="num mono">${money(t.cash)}</td>
           <td class="num mono">${money(t.digital)}</td>
           <td><span class="badge ${g.estado === 'CERRADO' ? 'badge-cerrado' : 'badge-abierto'}">${g.estado === 'CERRADO' ? 'Cerrado' : 'En curso'}</span></td>
+          <td style="text-align:center; padding: 6px 10px;">
+            <div style="display:inline-flex; gap:6px; align-items:center;">
+              <button type="button" class="btn btn-quiet btn-row-excel" data-group="${gIdx}" style="padding:4px 9px; font-size:12px; display:inline-flex; align-items:center; gap:4px;" title="Exportar Excel de ${g.label} con detalle">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/>
+                </svg>
+                Excel
+              </button>
+              <button type="button" class="btn btn-quiet btn-row-pdf" data-group="${gIdx}" style="padding:4px 9px; font-size:12px; display:inline-flex; align-items:center; gap:4px;" title="Exportar PDF de ${g.label} ajustable">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                PDF
+              </button>
+            </div>
+          </td>
         </tr>
         ${detailContent}
       `;
-    }).join('') || `<tr><td colspan="6" class="empty">Sin datos históricos aún.</td></tr>`;
+    }).join('') || `<tr><td colspan="7" class="empty">Sin datos históricos aún.</td></tr>`;
 
-    // Toggle para expandir detalle
+    // Expandir / Contraer filas
     tbodyHistorico.querySelectorAll('.hist-toggle').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -283,11 +352,34 @@ export function renderReportesView(container) {
         btn.innerHTML = isVisible ? '&#9654;' : '&#9660;';
       });
     });
+
     tbodyHistorico.querySelectorAll('.hist-group-row').forEach(row => {
       row.addEventListener('click', e => {
         if (e.target.closest('button')) return;
         const btn = row.querySelector('.hist-toggle');
         if (btn) btn.click();
+      });
+    });
+
+    tbodyHistorico.querySelectorAll('.btn-row-excel, .btn-detail-excel').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const gIdx = parseInt(btn.dataset.group, 10);
+        const group = currentGroups[gIdx];
+        if (group) {
+          exportPeriodToExcel(group, repFiltro);
+        }
+      });
+    });
+
+    tbodyHistorico.querySelectorAll('.btn-row-pdf, .btn-detail-pdf').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const gIdx = parseInt(btn.dataset.group, 10);
+        const group = currentGroups[gIdx];
+        if (group) {
+          openPdfExportModal(group, repFiltro);
+        }
       });
     });
   }
@@ -300,32 +392,21 @@ export function renderReportesView(container) {
     renderReportData();
   });
 
-  btnCSV.addEventListener('click', () => {
-    let csv = "Periodo,Gasto total,Efectivo,Digital,Estado\n";
-    currentGroups.forEach(g => {
-      const t = g.closures.reduce((acc, c) => {
-        const p = periodGasto(c);
-        acc.bruto += p.bruto;
-        acc.cash += p.cash;
-        acc.digital += p.digital;
-        return acc;
-      }, { bruto: 0, cash: 0, digital: 0 });
-      csv += `"${g.label}",${t.bruto.toFixed(2)},${t.cash.toFixed(2)},${t.digital.toFixed(2)},${g.estado}\n`;
-    });
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte_destajo_${repFiltro}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Archivo CSV descargado');
+  btnTopExcel.addEventListener('click', () => {
+    if (currentGroups.length > 0) {
+      exportPeriodToExcel(currentGroups[0], repFiltro);
+    } else {
+      showToast('No hay datos disponibles para exportar.');
+    }
   });
 
-  btnPDF.addEventListener('click', () => window.print());
+  btnTopPDF.addEventListener('click', () => {
+    if (currentGroups.length > 0) {
+      openPdfExportModal(currentGroups[0], repFiltro);
+    } else {
+      showToast('No hay datos disponibles para exportar.');
+    }
+  });
 
   renderReportData();
 }

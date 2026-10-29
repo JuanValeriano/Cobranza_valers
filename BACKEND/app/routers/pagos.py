@@ -48,8 +48,8 @@ def actualizar_pago(cierre_id: str, worker_id: str, data: PagoUpdate, db: Sessio
                 monto_digital = round(data.monto_digital, 2)
                 monto_efectivo = round(max(0.0, neto - monto_digital), 2)
             else:
-                monto_efectivo = round(neto / 2, 2)
-                monto_digital = round(neto - monto_efectivo, 2)
+                monto_efectivo = 0.0
+                monto_digital = 0.0
         elif metodo == "EFECTIVO":
             monto_efectivo = neto
             monto_digital = 0.0
@@ -88,8 +88,8 @@ def actualizar_pago(cierre_id: str, worker_id: str, data: PagoUpdate, db: Sessio
             elif pago.monto_efectivo is not None and pago.monto_digital is not None and round(pago.monto_efectivo + pago.monto_digital, 2) == pago.neto:
                 pass
             else:
-                pago.monto_efectivo = round(pago.neto / 2, 2)
-                pago.monto_digital = round(pago.neto - pago.monto_efectivo, 2)
+                pago.monto_efectivo = 0.0
+                pago.monto_digital = 0.0
         elif pago.metodo == "EFECTIVO":
             pago.monto_efectivo = pago.neto
             pago.monto_digital = 0.0

@@ -138,6 +138,7 @@ export function renderTarifarioView(container) {
     tabsContainer.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
     formEditar.classList.remove('open');
     renderTable();
+    store.syncWithBackend();
   });
 
   btnToggle.addEventListener('click', () => {

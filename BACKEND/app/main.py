@@ -27,10 +27,9 @@ async def auto_cierre_background_task():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Crear tablas en PostgreSQL (Neon) si no existen
+
     Base.metadata.create_all(bind=engine)
     
-    # Poblar base de datos inicial y verificar cierres automáticos
     db = SessionLocal()
     try:
         seed_database(db)
@@ -38,7 +37,6 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
     
-    # Iniciar la tarea periódica en segundo plano
     bg_task = asyncio.create_task(auto_cierre_background_task())
     try:
         yield
@@ -52,7 +50,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configurar CORS para permitir peticiones desde cualquier origen local
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -69,7 +66,6 @@ async def add_no_cache_headers(request, call_next):
     response.headers["Expires"] = "0"
     return response
 
-# Registrar Routers de la API
 app.include_router(trabajadores.router)
 app.include_router(tarifas.router)
 app.include_router(registros.router)
@@ -77,12 +73,10 @@ app.include_router(cierres.router)
 app.include_router(pagos.router)
 app.include_router(state.router)
 
-# Healthcheck
 @app.get("/api/health")
 def health():
     return {"status": "healthy", "db": "connected"}
 
-# Montar archivos estáticos para servir el frontend si está presente localmente
 frontend_dir = os.path.join(os.path.dirname(BASE_DIR), "FRONTEND")
 css_dir = os.path.join(frontend_dir, "css") if os.path.isdir(os.path.join(frontend_dir, "css")) else os.path.join(BASE_DIR, "css")
 js_dir = os.path.join(frontend_dir, "js") if os.path.isdir(os.path.join(frontend_dir, "js")) else os.path.join(BASE_DIR, "js")

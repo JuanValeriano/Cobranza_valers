@@ -34,8 +34,8 @@ def ejecutar_cierre_semana_db(cierre: Cierre, db: Session) -> Cierre:
                 monto_efectivo = pago.monto_efectivo
                 monto_digital = pago.monto_digital
             elif metodo == "MIXTO":
-                monto_efectivo = round(neto / 2, 2)
-                monto_digital = round(neto - monto_efectivo, 2)
+                monto_efectivo = 0.0
+                monto_digital = 0.0
             elif metodo == "EFECTIVO":
                 monto_efectivo = neto
                 monto_digital = 0.0
@@ -43,8 +43,8 @@ def ejecutar_cierre_semana_db(cierre: Cierre, db: Session) -> Cierre:
                 monto_efectivo = 0.0
                 monto_digital = neto
         else:
-            monto_efectivo = neto if metodo == "EFECTIVO" else (round(neto / 2, 2) if metodo == "MIXTO" else 0.0)
-            monto_digital = 0.0 if metodo == "EFECTIVO" else (round(neto - monto_efectivo, 2) if metodo == "MIXTO" else neto)
+            monto_efectivo = neto if metodo == "EFECTIVO" else 0.0
+            monto_digital = 0.0 if metodo in ("EFECTIVO", "MIXTO") else neto
 
         if not pago:
             pago = Pago(
@@ -69,20 +69,17 @@ def ejecutar_cierre_semana_db(cierre: Cierre, db: Session) -> Cierre:
     cierre.estado = "CERRADO"
     cierre.total_gastado = round(total_gastado, 2)
 
-    # Si no queda ninguna semana abierta, abrir la semana siguiente (inicia Lunes siguiente)
     hay_abierta = db.query(Cierre).filter(Cierre.estado == "ABIERTO").first()
     if not hay_abierta:
         fin_date = datetime.date.fromisoformat(cierre.fecha_fin)
-        # Si terminaba en domingo (weekday 6) o cualquier día, el siguiente lunes es fin_date + 1 (o según corresponda)
         if fin_date.weekday() == 6:
             next_start = fin_date + datetime.timedelta(days=1)
-        elif fin_date.weekday() == 5: # Sábado (legado)
+        elif fin_date.weekday() == 5:
             next_start = fin_date + datetime.timedelta(days=2)
         else:
             next_start = fin_date + datetime.timedelta(days=1)
-        next_fin = next_start + datetime.timedelta(days=6) # Domingo
+        next_fin = next_start + datetime.timedelta(days=6)
 
-        # Verificar si ya existía una semana para esa fecha inicio
         semana_existente = db.query(Cierre).filter(Cierre.fecha_inicio == next_start.isoformat()).first()
         if semana_existente:
             semana_existente.estado = "ABIERTO"
@@ -112,19 +109,16 @@ def procesar_cierres_automaticos(db: Session):
     for c in abiertas:
         fin_date = datetime.date.fromisoformat(c.fecha_fin)
         
-        # Corregir si fecha_fin era sábado (formato anterior) para extenderlo hasta domingo
         if fin_date.weekday() == 5:
             fin_date = fin_date + datetime.timedelta(days=1)
             c.fecha_fin = fin_date.isoformat()
             db.commit()
 
-        # Condición: domingo a las 11:59:59 PM
         limite = datetime.datetime.combine(fin_date, datetime.time(23, 59, 59))
         if now > limite:
             print(f"[AUTO-CIERRE] Cierre automático de semana {c.id} ({c.fecha_inicio} a {c.fecha_fin}) por vencer el domingo a las 11:59 PM.")
             ejecutar_cierre_semana_db(c, db)
 
-    # Asegurar que exista una semana ABIERTA para la semana en curso (Lunes a Domingo)
     hay_abierta = db.query(Cierre).filter(Cierre.estado == "ABIERTO").first()
     if not hay_abierta:
         curr_monday = today - datetime.timedelta(days=today.weekday())

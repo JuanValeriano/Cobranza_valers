@@ -18,6 +18,17 @@ def obtener_estado_completo(db: Session = Depends(get_db)):
     records = db.query(Registro).all()
     payments = db.query(Pago).all()
 
+    cambios_pagos = False
+    for p in payments:
+        if p.metodo == "MIXTO":
+            suma = round((p.monto_efectivo or 0.0) + (p.monto_digital or 0.0), 2)
+            if p.monto_efectivo is None or p.monto_digital is None or suma != round(p.neto, 2):
+                p.monto_efectivo = 0.0
+                p.monto_digital = 0.0
+                cambios_pagos = True
+    if cambios_pagos:
+        db.commit()
+
     return {
         "workers": [
             {

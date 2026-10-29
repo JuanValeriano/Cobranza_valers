@@ -1,6 +1,3 @@
-/* =====================================================================
-   MÓDULO: REGISTRO DIARIO — VALER E.I.R.L
-   ===================================================================== */
 import { store } from '../../state/store.js';
 import { ROLES, ROLE_BADGE } from '../../config/constants.js';
 import { money, fmtDate, todayISO } from '../../utils/formatters.js';
@@ -125,7 +122,6 @@ export function renderRegistroView(container) {
     </div>
   `;
 
-  // Referencias a elementos
   const form = container.querySelector('#formRegistro');
   const selTrabajador = container.querySelector('#rTrabajador');
   const inputSearch = container.querySelector('#rConceptoSearch');
@@ -145,7 +141,6 @@ export function renderRegistroView(container) {
     currentRoleRates = store.getRates().filter(r => r.activo && (!worker || r.rol === worker.rol));
 
     if (currentRoleRates.length > 0) {
-      // Pre-seleccionar la primera labor del rol
       selectConcept(currentRoleRates[0]);
     } else {
       clearConcept();
@@ -258,7 +253,6 @@ export function renderRegistroView(container) {
     const totalWeek = recs.reduce((a, r) => a + r.subtotal, 0);
     container.querySelector('#totalRegistros').textContent = money(totalWeek);
 
-    // Resumen día
     const todayRecs = recs.filter(r => r.fecha === todayISO());
     const todaySum = todayRecs.reduce((a, r) => a + r.subtotal, 0);
 
@@ -275,7 +269,6 @@ export function renderRegistroView(container) {
     `;
   }
 
-  // --- EVENTOS DE AUTO-BÚSQUEDA ---
   inputSearch.addEventListener('focus', () => {
     renderDropdown(inputSearch.value);
   });
@@ -284,7 +277,6 @@ export function renderRegistroView(container) {
     btnClearSearch.style.display = inputSearch.value ? 'flex' : 'none';
     renderDropdown(inputSearch.value);
 
-    // Si coincide exactamente con alguna labor, vincularla
     const exact = currentRoleRates.find(r => r.concepto.toLowerCase() === inputSearch.value.trim().toLowerCase());
     if (exact) {
       hiddenConcepto.value = exact.id;
@@ -344,14 +336,12 @@ export function renderRegistroView(container) {
     renderDropdown('');
   });
 
-  // Cerrar dropdown al hacer clic fuera
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.autocomplete-wrap')) {
       dropdownSearch.style.display = 'none';
     }
   });
 
-  // Otros eventos del formulario
   selTrabajador.addEventListener('change', updateConceptos);
   inputCantidad.addEventListener('input', updateSubtotal);
   radiosUnidad.forEach(r => r.addEventListener('change', updateSubtotal));
@@ -403,9 +393,6 @@ export function renderRegistroView(container) {
     }
   });
 
-  /* ───────────────────────────────
-     MODAL DE EDICIÓN DE REGISTRO
-  ─────────────────────────────── */
   function abrirModalEdicion(recordId) {
     const r = store.getRecords().find(x => x.id === recordId);
     if (!r) return;
@@ -477,13 +464,12 @@ export function renderRegistroView(container) {
 
     document.body.appendChild(overlay);
 
-    // Referencias internas del modal
     const meWorker = overlay.querySelector('#meTrabajador');
     const meSearch = overlay.querySelector('#meConceptoSearch');
     const meHidden = overlay.querySelector('#meConcepto');
-    const meClear  = overlay.querySelector('#meConceptoClear');
+    const meClear = overlay.querySelector('#meConceptoClear');
     const meDropdown = overlay.querySelector('#meConceptoDropdown');
-    const meBadge  = overlay.querySelector('#meRolBadge');
+    const meBadge = overlay.querySelector('#meRolBadge');
     const meCantidad = overlay.querySelector('#meCantidad');
     const meSubtotal = overlay.querySelector('#meSubtotal');
     const meUnidades = overlay.querySelectorAll('input[name="meUnidad"]');
@@ -535,7 +521,6 @@ export function renderRegistroView(container) {
       meDropdown.style.display = 'block';
     }
 
-    // Inicializar modal
     meUpdateRates();
     const initialRate = store.getRateById(r.rateId);
     if (initialRate) meSelectRate(initialRate);
@@ -552,7 +537,6 @@ export function renderRegistroView(container) {
     meCantidad.addEventListener('input', meCalcSubtotal);
     meUnidades.forEach(rb => rb.addEventListener('change', meCalcSubtotal));
 
-    // Cerrar al hacer clic fuera del dropdown
     document.addEventListener('click', function closeDropdown(evt) {
       if (!meSearch.contains(evt.target) && !meDropdown.contains(evt.target)) {
         meDropdown.style.display = 'none';
@@ -560,7 +544,6 @@ export function renderRegistroView(container) {
       }
     });
 
-    // Botones del modal
     const cerrar = () => document.body.removeChild(overlay);
     overlay.querySelector('.modal-close').addEventListener('click', cerrar);
     overlay.querySelector('#meBtnCancelar').addEventListener('click', cerrar);
@@ -586,7 +569,6 @@ export function renderRegistroView(container) {
       }
     });
 
-    // Foco inicial
     meSearch.focus();
   }
 

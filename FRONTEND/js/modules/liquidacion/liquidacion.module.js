@@ -59,7 +59,6 @@ export function renderLiquidacionView(container) {
         <strong style="color: var(--ink);">Cierre semanal (Automático y Manual):</strong> La semana se cierra automáticamente a las 11:59 PM de los días domingos y la nueva semana inicia el lunes a las 00:00 h. También puedes cerrarla de forma manual en cualquier momento con el botón "Cerrar semana".
       </div>
       <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: flex-start; flex-wrap: wrap;">
-        <button class="btn" id="btnImprimirResumen">Imprimir resumen</button>
         <button class="btn" id="btnReabrirSemana" style="display: none;">Reabrir semana</button>
         <button class="btn btn-primary" id="btnCerrarSemana">Cerrar semana</button>
         <button class="btn btn-primary" id="btnNuevaSemana" style="display: none;">+ Abrir nueva semana</button>
@@ -72,7 +71,6 @@ export function renderLiquidacionView(container) {
   const btnCerrar = container.querySelector('#btnCerrarSemana');
   const btnReabrir = container.querySelector('#btnReabrirSemana');
   const btnNuevaSemana = container.querySelector('#btnNuevaSemana');
-  const btnImprimir = container.querySelector('#btnImprimirResumen');
   const tbody = container.querySelector('#tbodyLiquidacion');
 
   function renderTableData() {
@@ -125,9 +123,16 @@ export function renderLiquidacionView(container) {
       const neto = Math.round((bruto - descuento) * 100) / 100;
       const metodo = pago ? pago.metodo : worker.metodo;
 
-      // Para MIXTO: montos personalizados
-      const montoEfectivo = pago ? (pago.montoEfectivo ?? Math.round(neto / 2 * 100) / 100) : Math.round(neto / 2 * 100) / 100;
-      const montoDigital  = pago ? (pago.montoDigital  ?? Math.round((neto - montoEfectivo) * 100) / 100) : Math.round((neto - montoEfectivo) * 100) / 100;
+      let montoEfectivo = 0;
+      let montoDigital = 0;
+      if (pago && typeof pago.montoEfectivo === 'number' && typeof pago.montoDigital === 'number' &&
+        Math.abs((pago.montoEfectivo + pago.montoDigital) - neto) < 0.01 && neto > 0) {
+        montoEfectivo = pago.montoEfectivo;
+        montoDigital = pago.montoDigital;
+      } else {
+        montoEfectivo = 0;
+        montoDigital = 0;
+      }
 
       const mixtoBlock = !isClosed && metodo === 'MIXTO' ? `
         <div class="mixto-split">
@@ -158,23 +163,23 @@ export function renderLiquidacionView(container) {
           <td class="num mono">${money(bruto)}</td>
           <td class="num mono">
             ${isClosed
-              ? money(descuento)
-              : `<input type="number" min="0" step="0.01" value="${descuento}"
+          ? money(descuento)
+          : `<input type="number" min="0" step="0.01" value="${descuento}"
                   style="width: 90px; text-align: right;" class="mono input-descuento"
                   data-worker="${worker.id}" data-bruto="${bruto}">`
-            }
+        }
           </td>
           <td class="num mono">${money(neto)}</td>
           <td>
             ${isClosed
-              ? `${METODOS[metodo] || metodo}${metodo === 'MIXTO' ? ` <span class="mono" style="font-size:11px;color:var(--ink-soft);">(ef:${money(montoEfectivo)} / dig:${money(montoDigital)})</span>` : ''}`
-              : `<div>
+          ? `${METODOS[metodo] || metodo}${metodo === 'MIXTO' ? ` <span class="mono" style="font-size:11px;color:var(--ink-soft);">(ef:${money(montoEfectivo)} / dig:${money(montoDigital)})</span>` : ''}`
+          : `<div>
                   <select style="width: auto;" class="select-metodo" data-worker="${worker.id}" data-bruto="${bruto}">
                     ${Object.keys(METODOS).map(m => `<option value="${m}" ${m === metodo ? 'selected' : ''}>${METODOS[m]}</option>`).join('')}
                   </select>
                   ${mixtoBlock}
                 </div>`
-            }
+        }
           </td>
           <td class="actions">
             <button class="btn btn-quiet btn-boleta" style="padding: 5px 10px; font-size: 12px;" data-worker="${worker.id}">
@@ -196,7 +201,10 @@ export function renderLiquidacionView(container) {
     container.querySelector('#liqTotalNeto').textContent = money(totBruto - totDesc);
   }
 
-  selSemana.addEventListener('change', renderTableData);
+  selSemana.addEventListener('change', () => {
+    renderTableData();
+    store.syncWithBackend();
+  });
 
   tbody.addEventListener('change', async (e) => {
     if (e.target.classList.contains('input-descuento')) {
@@ -212,10 +220,10 @@ export function renderLiquidacionView(container) {
     } else if (e.target.classList.contains('input-monto-efectivo') || e.target.classList.contains('input-monto-digital')) {
       const wid = e.target.dataset.worker;
       const bruto = parseFloat(e.target.dataset.bruto) || 0;
-      const neto  = parseFloat(e.target.dataset.neto)  || 0;
-      const row   = e.target.closest('tr');
+      const neto = parseFloat(e.target.dataset.neto) || 0;
+      const row = e.target.closest('tr');
       const efectivo = parseFloat(row.querySelector('.input-monto-efectivo')?.value) || 0;
-      const digital  = parseFloat(row.querySelector('.input-monto-digital')?.value)  || 0;
+      const digital = parseFloat(row.querySelector('.input-monto-digital')?.value) || 0;
 
       const checkEl = container.querySelector(`#mixto-check-${wid}`);
       const isOk = Math.abs(efectivo + digital - neto) < 0.01;
@@ -238,8 +246,6 @@ export function renderLiquidacionView(container) {
       abrirBoleta(selectedClosureId, btn.dataset.worker);
     }
   });
-
-  btnImprimir.addEventListener('click', () => window.print());
 
   function updateSelector() {
     const updatedClosures = [...store.getClosures()].sort((a, b) => (a.fechaInicio < b.fechaInicio ? 1 : -1));
