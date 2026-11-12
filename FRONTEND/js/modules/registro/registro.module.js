@@ -30,6 +30,7 @@ export function renderRegistroView(container) {
             <div class="field">
               <label for="rTrabajador">Colaborador</label>
               <select id="rTrabajador" required>
+                <option value="" disabled selected>Selecciona un colaborador...</option>
                 ${activeWorkers.map(w => `<option value="${w.id}">${w.nombre} — ${ROLES[w.rol]}</option>`).join('')}
               </select>
             </div>
@@ -62,7 +63,7 @@ export function renderRegistroView(container) {
             </div>
             <div class="field">
               <label for="rCantidad">Cantidad producida</label>
-              <input type="number" id="rCantidad" min="0" step="0.01" value="1" required>
+              <input type="number" id="rCantidad" min="0" step="0.001" value="1" placeholder="1.000" required>
             </div>
             <div class="field">
               <label for="rSubtotal">Subtotal (instantáneo)</label>
@@ -138,13 +139,16 @@ export function renderRegistroView(container) {
   function updateConceptos() {
     const worker = store.getWorkerById(selTrabajador.value);
     badgeSpan.innerHTML = worker ? `<span class="badge ${ROLE_BADGE[worker.rol]}">${ROLES[worker.rol]}</span>` : '';
-    currentRoleRates = store.getRates().filter(r => r.activo && (!worker || r.rol === worker.rol));
+    currentRoleRates = worker ? store.getRates().filter(r => r.activo && r.rol === worker.rol) : [];
 
-    if (currentRoleRates.length > 0) {
-      selectConcept(currentRoleRates[0]);
-    } else {
-      clearConcept();
+    clearConcept();
+
+    if (!worker) {
+      inputSearch.placeholder = "Primero selecciona un colaborador...";
+    } else if (currentRoleRates.length === 0) {
       inputSearch.placeholder = "Sin tarifas disponibles para este rol";
+    } else {
+      inputSearch.placeholder = "Escribe o haz clic para buscar labor...";
     }
   }
 
@@ -164,6 +168,16 @@ export function renderRegistroView(container) {
   }
 
   function renderDropdown(filterText = '') {
+    if (!selTrabajador.value) {
+      dropdownSearch.innerHTML = `
+        <div class="autocomplete-item empty" style="padding: 12px; color: var(--ink-soft); text-align: center;">
+          Primero selecciona un colaborador arriba
+        </div>
+      `;
+      dropdownSearch.style.display = 'block';
+      return;
+    }
+
     const q = (filterText || '').trim().toLowerCase();
     const matches = currentRoleRates.filter(r =>
       !q || r.concepto.toLowerCase().includes(q) || (r.id && r.id.toLowerCase().includes(q))
@@ -273,6 +287,12 @@ export function renderRegistroView(container) {
     renderDropdown(inputSearch.value);
   });
 
+  inputSearch.addEventListener('click', () => {
+    if (dropdownSearch.style.display !== 'block') {
+      renderDropdown(inputSearch.value);
+    }
+  });
+
   inputSearch.addEventListener('input', () => {
     btnClearSearch.style.display = inputSearch.value ? 'flex' : 'none';
     renderDropdown(inputSearch.value);
@@ -349,6 +369,12 @@ export function renderRegistroView(container) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    if (!selTrabajador.value) {
+      showToast('Por favor selecciona un colaborador');
+      selTrabajador.focus();
+      return;
+    }
+
     if (!hiddenConcepto.value) {
       showToast('Por favor selecciona una labor o código válido de la lista');
       inputSearch.focus();
@@ -366,6 +392,7 @@ export function renderRegistroView(container) {
         notas: container.querySelector('#rNotas').value
       });
 
+      clearConcept();
       inputCantidad.value = 1;
       container.querySelector('#rNotas').value = '';
       updateSubtotal();
@@ -442,7 +469,7 @@ export function renderRegistroView(container) {
           </div>
           <div class="field">
             <label for="meCantidad">Cantidad</label>
-            <input type="number" id="meCantidad" min="0" step="0.01" value="${r.cantidad}" required>
+            <input type="number" id="meCantidad" min="0" step="0.001" value="${r.cantidad}" placeholder="1.000" required>
           </div>
           <div class="field">
             <label for="meSubtotal">Subtotal</label>
@@ -528,7 +555,10 @@ export function renderRegistroView(container) {
 
     meWorker.addEventListener('change', () => {
       meUpdateRates();
-      if (meRates.length) meSelectRate(meRates[0]);
+      meHidden.value = '';
+      meSearch.value = '';
+      meClear.style.display = 'none';
+      meCalcSubtotal();
     });
 
     meSearch.addEventListener('input', () => { meHidden.value = ''; meClear.style.display = 'none'; meRenderDropdown(meSearch.value); });

@@ -66,7 +66,7 @@ def seed_database(db: Session):
     def calc_rate(rate_id, unidad, cant):
         rt = rates_map[rate_id]
         p = rt["precio_par"] if unidad == "PAR" else rt["precio_docena"]
-        return p, round(p * cant, 2)
+        return p, round(p * cant, 3)
 
     tod_off = min(today.weekday(), 5)
     sample_recs = [

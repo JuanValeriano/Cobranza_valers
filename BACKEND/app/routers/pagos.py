@@ -34,19 +34,19 @@ def actualizar_pago(cierre_id: str, worker_id: str, data: PagoUpdate, db: Sessio
     if not pago:
         bruto = data.bruto or 0.0
         descuentos = data.descuentos or 0.0
-        neto = round(bruto - descuentos, 2)
+        neto = round(bruto - descuentos, 3)
         metodo = data.metodo or (worker.metodo if worker else "EFECTIVO")
 
         if metodo == "MIXTO":
             if data.monto_efectivo is not None and data.monto_digital is not None:
-                monto_efectivo = round(data.monto_efectivo, 2)
-                monto_digital = round(data.monto_digital, 2)
+                monto_efectivo = round(data.monto_efectivo, 3)
+                monto_digital = round(data.monto_digital, 3)
             elif data.monto_efectivo is not None:
-                monto_efectivo = round(data.monto_efectivo, 2)
-                monto_digital = round(max(0.0, neto - monto_efectivo), 2)
+                monto_efectivo = round(data.monto_efectivo, 3)
+                monto_digital = round(max(0.0, neto - monto_efectivo), 3)
             elif data.monto_digital is not None:
-                monto_digital = round(data.monto_digital, 2)
-                monto_efectivo = round(max(0.0, neto - monto_digital), 2)
+                monto_digital = round(data.monto_digital, 3)
+                monto_efectivo = round(max(0.0, neto - monto_digital), 3)
             else:
                 monto_efectivo = 0.0
                 monto_digital = 0.0
@@ -72,20 +72,20 @@ def actualizar_pago(cierre_id: str, worker_id: str, data: PagoUpdate, db: Sessio
     else:
         if data.bruto is not None: pago.bruto = data.bruto
         if data.descuentos is not None: pago.descuentos = data.descuentos
-        pago.neto = round(pago.bruto - pago.descuentos, 2)
+        pago.neto = round(pago.bruto - pago.descuentos, 3)
         if data.metodo is not None: pago.metodo = data.metodo
 
         if pago.metodo == "MIXTO":
             if data.monto_efectivo is not None and data.monto_digital is not None:
-                pago.monto_efectivo = round(data.monto_efectivo, 2)
-                pago.monto_digital = round(data.monto_digital, 2)
+                pago.monto_efectivo = round(data.monto_efectivo, 3)
+                pago.monto_digital = round(data.monto_digital, 3)
             elif data.monto_efectivo is not None:
-                pago.monto_efectivo = round(data.monto_efectivo, 2)
-                pago.monto_digital = round(max(0.0, pago.neto - pago.monto_efectivo), 2)
+                pago.monto_efectivo = round(data.monto_efectivo, 3)
+                pago.monto_digital = round(max(0.0, pago.neto - pago.monto_efectivo), 3)
             elif data.monto_digital is not None:
-                pago.monto_digital = round(data.monto_digital, 2)
-                pago.monto_efectivo = round(max(0.0, pago.neto - pago.monto_digital), 2)
-            elif pago.monto_efectivo is not None and pago.monto_digital is not None and round(pago.monto_efectivo + pago.monto_digital, 2) == pago.neto:
+                pago.monto_digital = round(data.monto_digital, 3)
+                pago.monto_efectivo = round(max(0.0, pago.neto - pago.monto_digital), 3)
+            elif pago.monto_efectivo is not None and pago.monto_digital is not None and round(pago.monto_efectivo + pago.monto_digital, 3) == pago.neto:
                 pass
             else:
                 pago.monto_efectivo = 0.0

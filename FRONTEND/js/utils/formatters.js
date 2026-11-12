@@ -11,10 +11,10 @@ export function uid(prefix = 'id') {
  * @returns {string}
  */
 export function money(amount) {
-  const safe = (Math.round((amount || 0) * 100) / 100);
+  const safe = (Math.round((amount || 0) * 1000) / 1000);
   return `S/ ${safe.toLocaleString('es-PE', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 3
   })}`;
 }
 

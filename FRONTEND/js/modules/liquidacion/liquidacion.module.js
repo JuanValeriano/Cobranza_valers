@@ -120,13 +120,13 @@ export function renderLiquidacionView(container) {
     tbody.innerHTML = rows.map(({ worker, bruto }) => {
       const pago = payments.find(p => p.workerId === worker.id);
       const descuento = pago ? pago.descuentos : 0;
-      const neto = Math.round((bruto - descuento) * 100) / 100;
+      const neto = Math.round((bruto - descuento) * 1000) / 1000;
       const metodo = pago ? pago.metodo : worker.metodo;
 
       let montoEfectivo = 0;
       let montoDigital = 0;
       if (pago && typeof pago.montoEfectivo === 'number' && typeof pago.montoDigital === 'number' &&
-        Math.abs((pago.montoEfectivo + pago.montoDigital) - neto) < 0.01 && neto > 0) {
+        Math.abs((pago.montoEfectivo + pago.montoDigital) - neto) < 0.005 && neto > 0) {
         montoEfectivo = pago.montoEfectivo;
         montoDigital = pago.montoDigital;
       } else {
@@ -139,19 +139,19 @@ export function renderLiquidacionView(container) {
           <div style="display:flex; gap:10px; align-items:center;">
             <div style="flex:1">
               <label>Efectivo (S/)</label>
-              <input type="number" min="0" step="0.01" value="${montoEfectivo}"
+              <input type="number" min="0" step="0.001" value="${montoEfectivo}" placeholder="0.000"
                 class="mono input-monto-efectivo"
                 data-worker="${worker.id}" data-bruto="${bruto}" data-neto="${neto}">
             </div>
             <div style="flex:1">
               <label>Digital / Yape (S/)</label>
-              <input type="number" min="0" step="0.01" value="${montoDigital}"
+              <input type="number" min="0" step="0.001" value="${montoDigital}" placeholder="0.000"
                 class="mono input-monto-digital"
                 data-worker="${worker.id}" data-bruto="${bruto}" data-neto="${neto}">
             </div>
           </div>
           <div class="mixto-total-check" id="mixto-check-${worker.id}"
-            style="display: ${Math.abs(montoEfectivo + montoDigital - neto) < 0.01 ? 'none' : 'block'}">
+            style="display: ${Math.abs(montoEfectivo + montoDigital - neto) < 0.005 ? 'none' : 'block'}">
             &#9888; La suma de ambos montos debe ser igual al neto: ${money(neto)}
           </div>
         </div>` : '';
@@ -164,7 +164,7 @@ export function renderLiquidacionView(container) {
           <td class="num mono">
             ${isClosed
           ? money(descuento)
-          : `<input type="number" min="0" step="0.01" value="${descuento}"
+          : `<input type="number" min="0" step="0.001" value="${descuento}" placeholder="0.000"
                   style="width: 90px; text-align: right;" class="mono input-descuento"
                   data-worker="${worker.id}" data-bruto="${bruto}">`
         }
@@ -226,7 +226,7 @@ export function renderLiquidacionView(container) {
       const digital = parseFloat(row.querySelector('.input-monto-digital')?.value) || 0;
 
       const checkEl = container.querySelector(`#mixto-check-${wid}`);
-      const isOk = Math.abs(efectivo + digital - neto) < 0.01;
+      const isOk = Math.abs(efectivo + digital - neto) < 0.005;
       if (checkEl) {
         checkEl.style.display = isOk ? 'none' : 'block';
         checkEl.className = `mixto-total-check ${isOk ? 'ok' : 'err'}`;

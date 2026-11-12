@@ -27,7 +27,7 @@ export function getPeriodData(group) {
     const w = item.worker || { id: 'unknown', nombre: 'Desconocido', dni: '—', rol: '—', metodo: 'EFECTIVO' };
     const p = payments.find(pay => pay.workerId === w.id);
     const descuentos = p ? p.descuentos : 0;
-    const neto = Math.round((item.bruto - descuentos) * 100) / 100;
+    const neto = Math.round((item.bruto - descuentos) * 1000) / 1000;
     const metodo = p ? p.metodo : w.metodo;
     let montoEfectivo = 0;
     let montoDigital = 0;
@@ -39,7 +39,7 @@ export function getPeriodData(group) {
       montoDigital = neto;
     } else if (metodo === 'MIXTO') {
       if (p && typeof p.montoEfectivo === 'number' && typeof p.montoDigital === 'number' &&
-        Math.abs((p.montoEfectivo + p.montoDigital) - neto) < 0.01 && neto > 0) {
+        Math.abs((p.montoEfectivo + p.montoDigital) - neto) < 0.005 && neto > 0) {
         montoEfectivo = p.montoEfectivo;
         montoDigital = p.montoDigital;
       } else {
@@ -67,9 +67,40 @@ export function getPeriodData(group) {
   const totalEfectivo = workerRows.reduce((a, r) => a + r.montoEfectivo, 0);
   const totalDigital = workerRows.reduce((a, r) => a + r.montoDigital, 0);
 
+  const accumulatedMap = {};
+  records.forEach(r => {
+    const key = `${r.workerId}__${r.rateId}__${r.unidad}__${r.precio}`;
+    if (!accumulatedMap[key]) {
+      const w = store.getWorkerById(r.workerId);
+      const rt = store.getRateById(r.rateId);
+      accumulatedMap[key] = {
+        workerId: r.workerId,
+        workerNombre: w ? w.nombre : 'Desconocido',
+        workerRol: w ? (ROLES[w.rol] || w.rol) : '—',
+        rateId: r.rateId,
+        concepto: rt ? rt.concepto : (r.rateId || '—'),
+        codigo: rt ? rt.id : (r.rateId || '—'),
+        unidad: r.unidad,
+        precio: r.precio,
+        cantidad: 0,
+        subtotal: 0
+      };
+    }
+    accumulatedMap[key].cantidad = Math.round((accumulatedMap[key].cantidad + r.cantidad) * 1000) / 1000;
+    accumulatedMap[key].subtotal = Math.round((accumulatedMap[key].subtotal + r.subtotal) * 1000) / 1000;
+  });
+
+  const accumulatedLabors = Object.values(accumulatedMap).sort((a, b) => {
+    const compWorker = a.workerNombre.localeCompare(b.workerNombre);
+    if (compWorker !== 0) return compWorker;
+    return a.concepto.localeCompare(b.concepto);
+  });
+
   return {
     records,
     workerRows,
+    accumulatedLabors,
+    totalAccumulated: accumulatedLabors.length,
     totalBruto,
     totalDescuentos,
     totalNeto,
@@ -85,6 +116,11 @@ export function exportPeriodToExcel(group, repFiltro) {
   const tipoLabel = repFiltro === 'semanal' ? 'Semanal' : (repFiltro === 'mensual' ? 'Mensual' : 'Anual');
   const sanitizedLabel = group.label.replace(/[\/\\]/g, '-').replace(/\s+/g, '_');
   const filename = `Reporte_${tipoLabel}_${sanitizedLabel}.xls`;
+
+  const fmtDec = (val) => {
+    const n = Math.round((parseFloat(val) || 0) * 1000) / 1000;
+    return n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+  };
 
   const excelHtml = `
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -114,8 +150,8 @@ export function exportPeriodToExcel(group, repFiltro) {
     th { background-color: #2D241E; color: #FFFFFF; font-weight: bold; border: 1px solid #786C5E; padding: 7px 10px; text-align: left; }
     th.num { text-align: right; }
     td { border: 1px solid #D8D0C5; padding: 6px 10px; vertical-align: middle; }
-    td.num { text-align: right; mso-number-format: "\#\,\#\#0\.00"; }
-    td.currency { text-align: right; mso-number-format: "\"S/ \"\#\,\#\#0\.00"; }
+    td.num { text-align: right; mso-number-format: "\#\,\#\#0\.00#"; }
+    td.currency { text-align: right; mso-number-format: "\"S/ \"\#\,\#\#0\.00#"; }
     td.center { text-align: center; }
     .kpi-table th { background-color: #4A3B32; font-size: 10.5pt; text-align: center; }
     .kpi-table td { font-size: 13pt; font-weight: bold; text-align: center; background-color: #FAF8F5; }
@@ -156,9 +192,9 @@ export function exportPeriodToExcel(group, repFiltro) {
       <th>Total Labores</th>
     </tr>
     <tr>
-      <td class="currency" style="color:#2D241E;">S/ ${data.totalBruto.toFixed(2)}</td>
-      <td class="currency" style="color:#1B5E20;">S/ ${data.totalEfectivo.toFixed(2)}</td>
-      <td class="currency" style="color:#0D47A1;">S/ ${data.totalDigital.toFixed(2)}</td>
+      <td class="currency" style="color:#2D241E;">S/ ${fmtDec(data.totalBruto)}</td>
+      <td class="currency" style="color:#1B5E20;">S/ ${fmtDec(data.totalEfectivo)}</td>
+      <td class="currency" style="color:#0D47A1;">S/ ${fmtDec(data.totalDigital)}</td>
       <td style="color:#4A3B32;">${data.totalWorkers}</td>
       <td style="color:#4A3B32;">${data.totalRecords}</td>
     </tr>
@@ -187,12 +223,12 @@ export function exportPeriodToExcel(group, repFiltro) {
         <td>${r.worker.dni || '—'}</td>
         <td>${ROLES[r.worker.rol] || r.worker.rol}</td>
         <td class="num">${r.recordsCount}</td>
-        <td class="currency">S/ ${r.bruto.toFixed(2)}</td>
-        <td class="currency" style="color:#C62828;">${r.descuentos > 0 ? `S/ ${r.descuentos.toFixed(2)}` : 'S/ 0.00'}</td>
-        <td class="currency" style="font-weight:bold;">S/ ${r.neto.toFixed(2)}</td>
+        <td class="currency">S/ ${fmtDec(r.bruto)}</td>
+        <td class="currency" style="color:#C62828;">${r.descuentos > 0 ? `S/ ${fmtDec(r.descuentos)}` : 'S/ 0.00'}</td>
+        <td class="currency" style="font-weight:bold;">S/ ${fmtDec(r.neto)}</td>
         <td>${r.metodo}</td>
-        <td class="currency" style="color:#1B5E20;">S/ ${r.montoEfectivo.toFixed(2)}</td>
-        <td class="currency" style="color:#0D47A1;">S/ ${r.montoDigital.toFixed(2)}</td>
+        <td class="currency" style="color:#1B5E20;">S/ ${fmtDec(r.montoEfectivo)}</td>
+        <td class="currency" style="color:#0D47A1;">S/ ${fmtDec(r.montoDigital)}</td>
       </tr>
     `).join('') : `
       <tr><td colspan="10" class="center">No hay registros de colaboradores para este periodo.</td></tr>
@@ -200,12 +236,12 @@ export function exportPeriodToExcel(group, repFiltro) {
     <tr class="total-row">
       <td colspan="3"><strong>TOTALES CONSOLIDADOS</strong></td>
       <td class="num"><strong>${data.totalRecords}</strong></td>
-      <td class="currency"><strong>S/ ${data.totalBruto.toFixed(2)}</strong></td>
-      <td class="currency" style="color:#C62828;"><strong>S/ ${data.totalDescuentos.toFixed(2)}</strong></td>
-      <td class="currency"><strong>S/ ${data.totalNeto.toFixed(2)}</strong></td>
+      <td class="currency"><strong>S/ ${fmtDec(data.totalBruto)}</strong></td>
+      <td class="currency" style="color:#C62828;"><strong>S/ ${fmtDec(data.totalDescuentos)}</strong></td>
+      <td class="currency"><strong>S/ ${fmtDec(data.totalNeto)}</strong></td>
       <td>—</td>
-      <td class="currency" style="color:#1B5E20;"><strong>S/ ${data.totalEfectivo.toFixed(2)}</strong></td>
-      <td class="currency" style="color:#0D47A1;"><strong>S/ ${data.totalDigital.toFixed(2)}</strong></td>
+      <td class="currency" style="color:#1B5E20;"><strong>S/ ${fmtDec(data.totalEfectivo)}</strong></td>
+      <td class="currency" style="color:#0D47A1;"><strong>S/ ${fmtDec(data.totalDigital)}</strong></td>
     </tr>
   </table>
 
@@ -237,9 +273,9 @@ export function exportPeriodToExcel(group, repFiltro) {
           <td>${w ? (ROLES[w.rol] || w.rol) : '—'}</td>
           <td>${rt ? `${rt.concepto} (${rt.id})` : '—'}</td>
           <td class="center">${rec.unidad === 'PAR' ? 'Par' : 'Docena'}</td>
-          <td class="num">${rec.cantidad}</td>
-          <td class="currency">S/ ${rec.precio.toFixed(2)}</td>
-          <td class="currency" style="font-weight:bold;">S/ ${rec.subtotal.toFixed(2)}</td>
+          <td class="num">${fmtDec(rec.cantidad)}</td>
+          <td class="currency">S/ ${fmtDec(rec.precio)}</td>
+          <td class="currency" style="font-weight:bold;">S/ ${fmtDec(rec.subtotal)}</td>
           <td style="font-size:10pt; color:#555;">${rec.notas || ''}</td>
         </tr>
       `;
@@ -248,9 +284,9 @@ export function exportPeriodToExcel(group, repFiltro) {
     `}
     <tr class="total-row">
       <td colspan="6"><strong>TOTAL DE LABORES DEL PERIODO</strong></td>
-      <td class="num"><strong>${data.records.reduce((acc, r) => acc + r.cantidad, 0)}</strong></td>
+      <td class="num"><strong>${fmtDec(data.records.reduce((acc, r) => acc + r.cantidad, 0))}</strong></td>
       <td>—</td>
-      <td class="currency"><strong>S/ ${data.totalBruto.toFixed(2)}</strong></td>
+      <td class="currency"><strong>S/ ${fmtDec(data.totalBruto)}</strong></td>
       <td>—</td>
     </tr>
   </table>
@@ -531,50 +567,43 @@ export function buildPdfDocumentHtml(group, repFiltro, options = {}) {
   ` : ''}
 
   ${incDetalle ? `
-    <!-- TABLA DE DETALLE DE LABORES -->
-    <div class="section-title">2. Detalle Individual de Labores Realizadas (${data.totalRecords} registros)</div>
+    <!-- TABLA DE DETALLE ACUMULADO DE LABORES -->
+    <div class="section-title">2. Detalle Acumulado de Labores Realizadas (${data.totalAccumulated} conceptos acumulados)</div>
     <table>
       <thead>
         <tr>
           <th style="width:30px;" class="center">#</th>
-          <th>Fecha</th>
           <th>Colaborador</th>
           <th>Rol</th>
-          <th>Labor / Código</th>
-          <th class="center">Unidad</th>
-          <th class="num">Cantidad</th>
-          <th class="num">Precio</th>
-          <th class="num">Subtotal</th>
-          <th>Notas</th>
+          <th>Labor / Concepto</th>
+          <th class="center" style="width:75px;">Código</th>
+          <th class="center" style="width:65px;">Unidad</th>
+          <th class="num" style="width:80px;">Cantidad Total</th>
+          <th class="num" style="width:75px;">Precio Unit.</th>
+          <th class="num" style="width:85px;">Subtotal</th>
         </tr>
       </thead>
       <tbody>
-        ${data.records.length > 0 ? data.records.map((rec, idx) => {
-    const w = store.getWorkerById(rec.workerId);
-    const rt = store.getRateById(rec.rateId);
-    return `
+        ${data.accumulatedLabors.length > 0 ? data.accumulatedLabors.map((item, idx) => `
             <tr>
               <td class="center" style="color:#666;">${idx + 1}</td>
-              <td>${fmtDate(rec.fecha)}</td>
-              <td><strong>${w ? w.nombre : '—'}</strong></td>
-              <td>${w ? (ROLES[w.rol] || w.rol) : '—'}</td>
-              <td>${rt ? `${rt.concepto} (${rt.id})` : '—'}</td>
-              <td class="center">${rec.unidad === 'PAR' ? 'Par' : 'Docena'}</td>
-              <td class="num">${rec.cantidad}</td>
-              <td class="num">${money(rec.precio)}</td>
-              <td class="num"><strong>${money(rec.subtotal)}</strong></td>
-              <td style="font-size:8pt; color:#444;">${rec.notas || ''}</td>
+              <td><strong>${item.workerNombre}</strong></td>
+              <td>${item.workerRol}</td>
+              <td>${item.concepto}</td>
+              <td class="center">${item.codigo}</td>
+              <td class="center">${item.unidad === 'PAR' ? 'Par' : 'Docena'}</td>
+              <td class="num">${item.cantidad}</td>
+              <td class="num">${money(item.precio)}</td>
+              <td class="num"><strong>${money(item.subtotal)}</strong></td>
             </tr>
-          `;
-  }).join('') : `
-          <tr><td colspan="10" class="center">No hay labores registradas en este periodo.</td></tr>
+          `).join('') : `
+          <tr><td colspan="9" class="center">No hay labores registradas en este periodo.</td></tr>
         `}
         <tr class="total-row">
-          <td colspan="6"><strong>TOTAL DE LABORES</strong></td>
-          <td class="num"><strong>${data.records.reduce((acc, r) => acc + r.cantidad, 0)}</strong></td>
+          <td colspan="6"><strong>TOTAL ACUMULADO</strong></td>
+          <td class="num"><strong>${Math.round(data.accumulatedLabors.reduce((acc, r) => acc + r.cantidad, 0) * 1000) / 1000}</strong></td>
           <td>—</td>
           <td class="num"><strong>${money(data.totalBruto)}</strong></td>
-          <td>—</td>
         </tr>
       </tbody>
     </table>
@@ -705,7 +734,7 @@ export function openPdfExportModal(group, repFiltro) {
                 <input type="checkbox" id="chkIncNomina" checked> Desglose de nómina por colaborador
               </label>
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                <input type="checkbox" id="chkIncDetalle" checked> Detalle individual de labores diarias (${data.totalRecords} reg.)
+                <input type="checkbox" id="chkIncDetalle" checked> Detalle acumulado de labores por colaborador (${data.totalAccumulated} conceptos)
               </label>
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                 <input type="checkbox" id="chkIncFirmas" checked> Recuadro para firmas de conformidad

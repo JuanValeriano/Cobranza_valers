@@ -1,12 +1,12 @@
-import { store } from './state/store.js?v=6';
-import { initSidebar, setActiveNavItem } from './components/sidebar.js?v=6';
-import { renderResumenView } from './modules/resumen/resumen.module.js?v=6';
-import { renderRegistroView } from './modules/registro/registro.module.js?v=6';
-import { renderTrabajadoresView } from './modules/trabajadores/trabajadores.module.js?v=6';
-import { renderTarifarioView } from './modules/tarifario/tarifario.module.js?v=6';
-import { renderLiquidacionView } from './modules/liquidacion/liquidacion.module.js?v=6';
-import { renderReportesView } from './modules/reportes/reportes.module.js?v=6';
-import { showToast } from './components/toast.js?v=6';
+import { store } from './state/store.js?v=7';
+import { initSidebar, setActiveNavItem } from './components/sidebar.js?v=7';
+import { renderResumenView } from './modules/resumen/resumen.module.js?v=7';
+import { renderRegistroView } from './modules/registro/registro.module.js?v=7';
+import { renderTrabajadoresView } from './modules/trabajadores/trabajadores.module.js?v=7';
+import { renderTarifarioView } from './modules/tarifario/tarifario.module.js?v=7';
+import { renderLiquidacionView } from './modules/liquidacion/liquidacion.module.js?v=7';
+import { renderReportesView } from './modules/reportes/reportes.module.js?v=7';
+import { showToast } from './components/toast.js?v=7';
 
 const VIEWS = {
   resumen: {

@@ -107,7 +107,7 @@ export function renderReportesView(container) {
           const ef = p.montoEfectivo || 0;
           const dig = p.montoDigital || 0;
           const neto = p.neto !== undefined ? p.neto : 0;
-          if (Math.abs(ef + dig - neto) < 0.01 && neto > 0) {
+          if (Math.abs(ef + dig - neto) < 0.005 && neto > 0) {
             cash += ef;
             digital += dig;
           }

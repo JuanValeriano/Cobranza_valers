@@ -27,10 +27,10 @@ def ejecutar_cierre_semana_db(cierre: Cierre, db: Session) -> Cierre:
 
         pago = db.query(Pago).filter(Pago.cierre_id == cierre.id, Pago.worker_id == wid).first()
         descuentos = pago.descuentos if pago else 0.0
-        neto = round(bruto - descuentos, 2)
+        neto = round(bruto - descuentos, 3)
         if pago:
             metodo = pago.metodo or metodo
-            if metodo == "MIXTO" and pago.monto_efectivo is not None and pago.monto_digital is not None and round(pago.monto_efectivo + pago.monto_digital, 2) == neto:
+            if metodo == "MIXTO" and pago.monto_efectivo is not None and pago.monto_digital is not None and round(pago.monto_efectivo + pago.monto_digital, 3) == neto:
                 monto_efectivo = pago.monto_efectivo
                 monto_digital = pago.monto_digital
             elif metodo == "MIXTO":
@@ -67,7 +67,7 @@ def ejecutar_cierre_semana_db(cierre: Cierre, db: Session) -> Cierre:
             pago.monto_digital = monto_digital
 
     cierre.estado = "CERRADO"
-    cierre.total_gastado = round(total_gastado, 2)
+    cierre.total_gastado = round(total_gastado, 3)
 
     hay_abierta = db.query(Cierre).filter(Cierre.estado == "ABIERTO").first()
     if not hay_abierta:

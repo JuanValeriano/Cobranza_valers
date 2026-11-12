@@ -276,7 +276,7 @@ class Store {
 
     const cant = parseFloat(cantidad) || 0;
     const precio = unidad === 'PAR' ? rate.precioPar : rate.precioDocena;
-    const subtotal = Math.round(precio * cant * 100) / 100;
+    const subtotal = Math.round(precio * cant * 1000) / 1000;
 
     const record = {
       id: uid('reg'),
@@ -325,7 +325,7 @@ class Store {
 
     const cant = parseFloat(cantidad) || 0;
     const precio = unidad === 'PAR' ? rate.precioPar : rate.precioDocena;
-    const subtotal = Math.round(precio * cant * 100) / 100;
+    const subtotal = Math.round(precio * cant * 1000) / 1000;
 
     r.workerId = workerId;
     r.rateId = rateId;
@@ -395,7 +395,7 @@ class Store {
     const p = this.ensurePayment(closureId, workerId, bruto);
     p.descuentos = parseFloat(val) || 0;
     p.bruto = bruto;
-    p.neto = Math.round((bruto - p.descuentos) * 100) / 100;
+    p.neto = Math.round((bruto - p.descuentos) * 1000) / 1000;
     this.notify();
 
     try {
@@ -462,9 +462,9 @@ class Store {
       const bruto = byWorker[wid];
       const p = this.ensurePayment(closureId, wid, bruto);
       p.bruto = bruto;
-      p.neto = Math.round((bruto - p.descuentos) * 100) / 100;
+      p.neto = Math.round((bruto - p.descuentos) * 1000) / 1000;
       if (p.metodo === 'MIXTO') {
-        const hasValidCustom = (p.montoEfectivo !== undefined && p.montoDigital !== undefined && Math.abs((p.montoEfectivo + p.montoDigital) - p.neto) < 0.05 && p.neto > 0);
+        const hasValidCustom = (p.montoEfectivo !== undefined && p.montoDigital !== undefined && Math.abs((p.montoEfectivo + p.montoDigital) - p.neto) < 0.005 && p.neto > 0);
         if (!hasValidCustom) {
           p.montoEfectivo = 0;
           p.montoDigital = 0;
@@ -476,7 +476,7 @@ class Store {
     });
 
     closure.estado = 'CERRADO';
-    closure.totalGastado = Object.values(byWorker).reduce((a, b) => a + b, 0);
+    closure.totalGastado = Math.round(Object.values(byWorker).reduce((a, b) => a + b, 0) * 1000) / 1000;
 
     if (!this.state.closures.some(c => c.estado === 'ABIERTO')) {
       const nextStart = addDays(closure.fechaFin, 1);

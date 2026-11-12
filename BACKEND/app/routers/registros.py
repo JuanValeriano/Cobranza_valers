@@ -62,7 +62,7 @@ def crear_registro(data: RegistroCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tarifa no encontrada")
 
     precio = rate.precio_par if data.unidad == "PAR" else rate.precio_docena
-    subtotal = round(precio * data.cantidad, 2)
+    subtotal = round(precio * data.cantidad, 3)
     reg_id = f"reg_{uuid.uuid4().hex[:7]}"
 
     r = Registro(
@@ -134,7 +134,7 @@ def actualizar_registro(record_id: str, data: RegistroUpdate, db: Session = Depe
     rate = db.query(Tarifa).filter(Tarifa.id == r.rate_id).first()
     if rate:
         r.precio = rate.precio_par if r.unidad == "PAR" else rate.precio_docena
-        r.subtotal = round(r.precio * r.cantidad, 2)
+        r.subtotal = round(r.precio * r.cantidad, 3)
 
     db.commit()
     db.refresh(r)
